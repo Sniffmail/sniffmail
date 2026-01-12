@@ -40,7 +40,6 @@
   ],
   "author": "Juztuz",
   "license": "UNLICENSED",
-  "private": true,
   "engines": {
     "node": ">=18"
   },
