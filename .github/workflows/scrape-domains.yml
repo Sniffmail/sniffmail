@@ -28,18 +28,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Cache Puppeteer
-        id: cache-puppeteer
+      - name: Cache Puppeteer browser
         uses: actions/cache@v4
         with:
-          path: |
-            node_modules
-            ~/.cache/puppeteer
-          key: puppeteer-${{ runner.os }}-v1
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            puppeteer-${{ runner.os }}-
 
       - name: Install dependencies
-        run: npm install puppeteer
+        run: npm ci
 
       - name: Run domain scraper
         id: scraper
