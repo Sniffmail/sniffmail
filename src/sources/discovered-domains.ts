@@ -13,7 +13,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // File containing discovered domains
-const DISCOVERED_DOMAINS_FILE = path.join(__dirname, '../data/discovered-domains.json');
+// When built, __dirname is 'dist/', so we need to look in 'src/data/' from package root
+// When in dev, __dirname is 'src/sources/', so '../data/' works
+const packageRoot = path.resolve(__dirname, __dirname.includes('dist') ? '..' : '../..');
+const DISCOVERED_DOMAINS_FILE = path.join(packageRoot, 'src/data/discovered-domains.json');
 
 let discoveredDomains: Set<string> = new Set();
 let lastLoadTime = 0;
