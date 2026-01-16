@@ -39,7 +39,7 @@ const FALLBACK_TEMP_MAIL_DOMAINS = [
   'seondes.com', 'adrais.com', 'ecstor.com', 'lero3.com', 'comsb.com',
   'dni8.com', 'moranfx.com', 'ndiety.com', 'sablecc.com', 'phamay.com',
   'avtolev.com', 'w3heroes.com', 'beltng.com', 'miwacle.com', 'ingitel.com',
-  'yyxxi.com',
+  'yyxxi.com', "xspiel.com"
 ];
 
 let scrapedDomains: Set<string> = new Set();
