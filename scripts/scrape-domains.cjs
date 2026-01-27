@@ -130,7 +130,7 @@ const KNOWN_TEMP_DOMAINS = [
 // Track scraping results
 const results = {
   apis: {},
-  tempMailOrg: { success: false, domain: null },
+  tempMailOrg: { success: false, domains: [], count: 0 },
   errors: [],
 };
 
@@ -176,14 +176,16 @@ async function fetchFromAPI(api) {
 async function scrapeTempMailOrg() {
   let browser;
   try {
-    console.log('[temp-mail.org] Launching Puppeteer...');
+    console.log('[temp-mail.org] Launching Puppeteer (non-headless for web2 mailbox)...');
     browser = await puppeteer.launch({
-      headless: true,
+      headless: 'new', // Use new headless mode for better compatibility
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-blink-features=AutomationControlled',
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
       ],
     });
 
@@ -191,6 +193,10 @@ async function scrapeTempMailOrg() {
 
     await page.evaluateOnNewDocument(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      // Additional anti-detection
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+      window.chrome = { runtime: {} };
     });
 
     await page.setUserAgent(
@@ -199,40 +205,163 @@ async function scrapeTempMailOrg() {
 
     await page.setViewport({ width: 1920, height: 1080 });
 
-    console.log('[temp-mail.org] Navigating to page...');
-    await page.goto('https://temp-mail.org/en/', {
-      waitUntil: 'networkidle0',
+    // Intercept network requests to capture domain info from API calls
+    const capturedDomains = new Set();
+    await page.setRequestInterception(true);
+
+    page.on('request', (request) => {
+      request.continue();
+    });
+
+    page.on('response', async (response) => {
+      const url = response.url();
+      // Capture any API responses that might contain domain info
+      if (url.includes('api') || url.includes('domain') || url.includes('mail')) {
+        try {
+          const contentType = response.headers()['content-type'] || '';
+          if (contentType.includes('application/json')) {
+            const text = await response.text();
+            // Look for domain patterns in JSON responses
+            const domainMatches = text.match(/[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,}/g);
+            if (domainMatches) {
+              domainMatches.forEach((d) => {
+                const domain = d.toLowerCase();
+                // Filter out common non-email domains
+                if (!domain.includes('temp-mail') &&
+                    !domain.includes('cloudflare') &&
+                    !domain.includes('google') &&
+                    !domain.includes('jsdelivr') &&
+                    !domain.includes('github')) {
+                  capturedDomains.add(domain);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          // Ignore response parsing errors
+        }
+      }
+    });
+
+    console.log('[temp-mail.org] Navigating to web2 mailbox...');
+    await page.goto('https://web2.temp-mail.org/mailbox', {
+      waitUntil: 'networkidle2',
       timeout: 60000,
     });
 
-    console.log('[temp-mail.org] Waiting for email to appear...');
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    console.log('[temp-mail.org] Waiting for page to load...');
+    await new Promise((resolve) => setTimeout(resolve, 8000));
 
-    await page.waitForFunction(
-      `(() => {
-        const text = document.body.innerText;
-        const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/);
-        return emailMatch !== null;
-      })()`,
-      { timeout: 45000 }
-    );
+    // Try to find email address displayed on the page
+    const pageData = await page.evaluate(() => {
+      const text = document.body.innerText || '';
 
-    const email = await page.evaluate(() => {
-      const text = document.body.innerText;
+      // Look for email patterns
       const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-      return emailMatch ? emailMatch[0] : null;
+
+      // Also look in input fields
+      const inputs = document.querySelectorAll('input');
+      let inputEmail = null;
+      inputs.forEach((input) => {
+        const val = input.value || '';
+        if (val.includes('@')) {
+          inputEmail = val;
+        }
+      });
+
+      // Look for domain in select dropdowns or domain lists
+      const selects = document.querySelectorAll('select');
+      const selectDomains = [];
+      selects.forEach((select) => {
+        const options = select.querySelectorAll('option');
+        options.forEach((opt) => {
+          const val = opt.value || opt.textContent || '';
+          if (val.includes('.') && !val.includes(' ')) {
+            selectDomains.push(val);
+          }
+        });
+      });
+
+      // Look for domains in any element with domain-related class/id
+      const domainElements = document.querySelectorAll('[class*="domain"], [id*="domain"], [data-domain]');
+      const elementDomains = [];
+      domainElements.forEach((el) => {
+        const text = el.textContent || el.getAttribute('data-domain') || '';
+        if (text.includes('.')) {
+          elementDomains.push(text.trim());
+        }
+      });
+
+      return {
+        email: emailMatch ? emailMatch[0] : inputEmail,
+        selectDomains,
+        elementDomains,
+        pageText: text.substring(0, 5000), // First 5000 chars for debugging
+      };
     });
 
-    if (email && email.includes('@')) {
-      const domain = email.split('@')[1]?.toLowerCase();
+    console.log('[temp-mail.org] Page data extracted');
+
+    const foundDomains = new Set();
+
+    // Add captured domains from network requests
+    capturedDomains.forEach((d) => foundDomains.add(d));
+
+    // Extract domain from email if found
+    if (pageData.email && pageData.email.includes('@')) {
+      const domain = pageData.email.split('@')[1]?.toLowerCase();
       if (domain) {
-        console.log('[temp-mail.org] Found domain: ' + domain);
-        results.tempMailOrg = { success: true, domain };
-        return [domain];
+        console.log('[temp-mail.org] Found email domain: ' + domain);
+        foundDomains.add(domain);
       }
     }
-    results.tempMailOrg = { success: false, error: 'Could not extract domain' };
-    results.errors.push('temp-mail.org: Could not extract domain');
+
+    // Add domains from select dropdowns
+    pageData.selectDomains.forEach((d) => {
+      const domain = d.toLowerCase().replace('@', '');
+      if (domain.includes('.')) {
+        foundDomains.add(domain);
+      }
+    });
+
+    // Add domains from elements
+    pageData.elementDomains.forEach((d) => {
+      const domain = d.toLowerCase().replace('@', '');
+      if (domain.includes('.')) {
+        foundDomains.add(domain);
+      }
+    });
+
+    // Also extract any domains from page text
+    const textDomains = pageData.pageText.match(/[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,}/g);
+    if (textDomains) {
+      textDomains.forEach((d) => {
+        const domain = d.toLowerCase();
+        // Filter common non-temp-mail domains
+        if (!['temp-mail.org', 'google.com', 'cloudflare.com', 'jsdelivr.net', 'github.com',
+              'googleapis.com', 'gstatic.com', 'facebook.com', 'twitter.com'].includes(domain) &&
+            !domain.endsWith('.js') && !domain.endsWith('.css') && !domain.endsWith('.png')) {
+          foundDomains.add(domain);
+        }
+      });
+    }
+
+    if (foundDomains.size > 0) {
+      const domainsArray = Array.from(foundDomains);
+      console.log('[temp-mail.org] Found domains: ' + domainsArray.join(', '));
+      results.tempMailOrg = { success: true, domains: domainsArray, count: domainsArray.length };
+      return domainsArray;
+    }
+
+    // Fallback: take a screenshot for debugging (only in CI)
+    if (process.env.CI) {
+      const screenshotPath = '/tmp/temp-mail-debug.png';
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      console.log('[temp-mail.org] Debug screenshot saved to: ' + screenshotPath);
+    }
+
+    results.tempMailOrg = { success: false, error: 'Could not extract domains from web2 mailbox' };
+    results.errors.push('temp-mail.org: Could not extract domains from web2 mailbox');
     return [];
   } catch (error) {
     console.error('[temp-mail.org] Error:', error.message);
