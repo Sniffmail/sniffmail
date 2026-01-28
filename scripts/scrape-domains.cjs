@@ -12,6 +12,53 @@ const path = require('path');
 const DISCOVERED_DOMAINS_FILE = path.join(__dirname, '../src/data/discovered-domains.json');
 const GITHUB_OUTPUT = process.env.GITHUB_OUTPUT;
 
+// File extensions and patterns that are NOT valid email domains
+const INVALID_DOMAIN_PATTERNS = [
+  /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map|json|xml|html|htm|php|asp|aspx)$/i,
+  /^(www|api|cdn|static|assets|images|img|fonts|scripts|styles)\./i,
+];
+
+// Known non-email domains to filter out
+const NON_EMAIL_DOMAINS = new Set([
+  'temp-mail.org', 'google.com', 'cloudflare.com', 'jsdelivr.net', 'github.com',
+  'googleapis.com', 'gstatic.com', 'facebook.com', 'twitter.com', 'cloudflare.net',
+  'favicon.ico', 'w3.org', 'schema.org', 'jquery.com', 'bootstrapcdn.com',
+  'fontawesome.com', 'unpkg.com', 'npmjs.com', 'cdnjs.cloudflare.com',
+]);
+
+/**
+ * Validates if a string looks like a legitimate email domain
+ */
+function isValidEmailDomain(domain) {
+  if (!domain || typeof domain !== 'string') return false;
+
+  const d = domain.toLowerCase().trim();
+
+  // Must have at least one dot
+  if (!d.includes('.')) return false;
+
+  // Check against invalid patterns
+  for (const pattern of INVALID_DOMAIN_PATTERNS) {
+    if (pattern.test(d)) return false;
+  }
+
+  // Check against known non-email domains
+  if (NON_EMAIL_DOMAINS.has(d)) return false;
+
+  // Must match basic domain format (alphanumeric, hyphens, dots)
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/.test(d)) {
+    return false;
+  }
+
+  // TLD must be at least 2 chars and not look like a file extension
+  const tld = d.split('.').pop();
+  if (tld.length < 2 || ['ico', 'js', 'css', 'png', 'jpg', 'gif', 'svg'].includes(tld)) {
+    return false;
+  }
+
+  return true;
+}
+
 // Allowlist - legitimate privacy services that should never be blocked
 const ALLOWLIST = new Set([
   'simplelogin.com',
@@ -226,12 +273,7 @@ async function scrapeTempMailOrg() {
             if (domainMatches) {
               domainMatches.forEach((d) => {
                 const domain = d.toLowerCase();
-                // Filter out common non-email domains
-                if (!domain.includes('temp-mail') &&
-                    !domain.includes('cloudflare') &&
-                    !domain.includes('google') &&
-                    !domain.includes('jsdelivr') &&
-                    !domain.includes('github')) {
+                if (isValidEmailDomain(domain)) {
                   capturedDomains.add(domain);
                 }
               });
@@ -319,7 +361,7 @@ async function scrapeTempMailOrg() {
     // Add domains from select dropdowns
     pageData.selectDomains.forEach((d) => {
       const domain = d.toLowerCase().replace('@', '');
-      if (domain.includes('.')) {
+      if (isValidEmailDomain(domain)) {
         foundDomains.add(domain);
       }
     });
@@ -327,7 +369,7 @@ async function scrapeTempMailOrg() {
     // Add domains from elements
     pageData.elementDomains.forEach((d) => {
       const domain = d.toLowerCase().replace('@', '');
-      if (domain.includes('.')) {
+      if (isValidEmailDomain(domain)) {
         foundDomains.add(domain);
       }
     });
@@ -337,10 +379,7 @@ async function scrapeTempMailOrg() {
     if (textDomains) {
       textDomains.forEach((d) => {
         const domain = d.toLowerCase();
-        // Filter common non-temp-mail domains
-        if (!['temp-mail.org', 'google.com', 'cloudflare.com', 'jsdelivr.net', 'github.com',
-              'googleapis.com', 'gstatic.com', 'facebook.com', 'twitter.com'].includes(domain) &&
-            !domain.endsWith('.js') && !domain.endsWith('.css') && !domain.endsWith('.png')) {
+        if (isValidEmailDomain(domain)) {
           foundDomains.add(domain);
         }
       });
