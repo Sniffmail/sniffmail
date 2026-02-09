@@ -29,7 +29,7 @@ export interface ValidationResult {
 }
 
 export interface ValidationOptions {
-  /** Enable deep SMTP verification via Reacher backend (default: false) */
+  /** Enable deep SMTP verification (default: false) */
   deep?: boolean;
   /** Check MX records (default: true) */
   checkMx?: boolean;
@@ -40,7 +40,7 @@ export interface ValidationOptions {
 }
 
 export interface BatchValidationOptions extends ValidationOptions {
-  /** Max concurrent Reacher calls for deep mode (default: 5) */
+  /** Max concurrent API calls for deep mode (default: 5) */
   concurrency?: number;
 }
 
@@ -69,8 +69,8 @@ export interface CacheStore {
 }
 
 export interface SniffmailConfig {
-  reacherUrl?: string;
-  reacherApiKey?: string;
+  /** Your Sniffmail API key */
+  apiKey?: string;
   cache?: {
     enabled?: boolean;
     store?: CacheStore;

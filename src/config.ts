@@ -1,5 +1,7 @@
 import type { SniffmailConfig, CacheTtlConfig } from './types';
 
+const API_URL = 'https://api.sniffmail.io';
+
 const DEFAULT_TTL: Required<CacheTtlConfig> = {
   safe: 604800, // 7 days
   invalid: 2592000, // 30 days
@@ -29,12 +31,12 @@ export function getConfig(): SniffmailConfig {
   return globalConfig;
 }
 
-export function getReacherUrl(): string | undefined {
-  return globalConfig.reacherUrl || process.env.REACHER_BACKEND_URL;
+export function getApiUrl(): string {
+  return API_URL;
 }
 
-export function getReacherApiKey(): string | undefined {
-  return globalConfig.reacherApiKey || process.env.REACHER_API_KEY;
+export function getApiKey(): string | undefined {
+  return globalConfig.apiKey || process.env.SNIFFMAIL_API_KEY;
 }
 
 export function getCacheTtl(status: 'safe' | 'invalid' | 'risky' | 'unknown'): number {

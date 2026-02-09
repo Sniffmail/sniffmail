@@ -8,7 +8,7 @@
  * 2. Disposable domain detection (GitHub blocklist, scraped domains, discovered domains)
  * 3. MX record lookup (via node-email-verifier)
  * 4. DeBounce API check
- * 5. Deep SMTP verification via Reacher backend (optional)
+ * 5. Deep SMTP verification via Sniffmail API (optional)
  */
 
 import emailValidator from 'node-email-verifier';
@@ -21,8 +21,8 @@ import {
   addDiscoveredDomain,
   reloadDiscoveredDomains,
 } from './sources/discovered-domains';
-import { checkMailbox, ReacherNotConfiguredError } from './reacher/client';
-import type { ReacherResponse } from './reacher/types';
+import { checkMailbox, ApiKeyNotConfiguredError } from './api/client';
+import type { ApiResponse } from './api/types';
 import { getFromCache, setInCache } from './cache';
 import { getCacheTtl, isCacheEnabled } from './config';
 import type {
@@ -66,7 +66,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * const result = await validateEmail('someone@temp-mail.org');
  *
  * @example
- * // Deep mode - includes SMTP mailbox verification via Reacher
+ * // Deep mode - includes SMTP mailbox verification
  * const result = await validateEmail('fakeperson@google.com', { deep: true });
  */
 export async function validateEmail(
@@ -171,13 +171,13 @@ export async function validateEmail(
       }
     }
 
-    // Step 5: Deep SMTP verification via Reacher
-    const reacherResponse = await checkMailbox(normalizedEmail);
-    const result = transformReacherResponse(normalizedEmail, reacherResponse);
+    // Step 5: Deep SMTP verification
+    const apiResponse = await checkMailbox(normalizedEmail);
+    const result = transformApiResponse(normalizedEmail, apiResponse);
 
     // Cache based on result type
     if (isCacheEnabled()) {
-      const ttl = getCacheTtl(reacherResponse.is_reachable);
+      const ttl = getCacheTtl(apiResponse.is_reachable);
       if (ttl > 0) {
         await setInCache(normalizedEmail, JSON.stringify(result), ttl);
       }
@@ -185,8 +185,8 @@ export async function validateEmail(
 
     return result;
   } catch (error) {
-    if (error instanceof ReacherNotConfiguredError) {
-      throw error; // Let this propagate so users know to configure Reacher
+    if (error instanceof ApiKeyNotConfiguredError) {
+      throw error; // Let this propagate so users know to configure API key
     }
 
     console.error(`[Email Validation] Error validating ${email}:`, (error as Error).message);
@@ -254,13 +254,13 @@ function createResult(
   };
 }
 
-function transformReacherResponse(email: string, response: ReacherResponse): ValidationResult {
+function transformApiResponse(email: string, response: ApiResponse): ValidationResult {
   const isReachable = response.is_reachable as ReachableStatus;
   const isValid = isReachable === 'safe';
 
   let reason: ValidationReason = null;
   if (!isValid) {
-    reason = mapReacherStatusToReason(response);
+    reason = mapApiStatusToReason(response);
   }
 
   return {
@@ -279,7 +279,7 @@ function transformReacherResponse(email: string, response: ReacherResponse): Val
   };
 }
 
-function mapReacherStatusToReason(response: ReacherResponse): ValidationReason {
+function mapApiStatusToReason(response: ApiResponse): ValidationReason {
   if (response.misc.is_disposable) {
     return 'disposable';
   }

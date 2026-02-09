@@ -1,5 +1,5 @@
 /**
- * @juztuz/burner-email-validator v2
+ * burner-email-validator v2
  *
  * Email validation library that detects disposable/burner email addresses
  * and optionally verifies mailbox existence via SMTP.
@@ -37,8 +37,8 @@ export type {
 // Cache utilities (for advanced usage)
 export { MemoryCache, RedisCache } from './cache';
 
-// Reacher client errors (for error handling)
-export { ReacherNotConfiguredError, ReacherError } from './reacher/client';
+// Error classes (for error handling)
+export { ApiKeyNotConfiguredError, SniffmailError } from './api/client';
 
 // Re-export individual source modules for advanced usage
 export {
