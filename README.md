@@ -1,4 +1,4 @@
-# burner-email-validator
+# sniffmail
 
 A comprehensive email validation library that detects disposable/burner email addresses and verifies mailbox existence via SMTP.
 
@@ -18,13 +18,13 @@ A comprehensive email validation library that detects disposable/burner email ad
 ## Installation
 
 ```bash
-npm install burner-email-validator
+npm install sniffmail
 ```
 
 ## Quick Start
 
 ```typescript
-import { validateEmail } from 'burner-email-validator';
+import { validateEmail } from 'sniffmail';
 
 // Basic validation (syntax + disposable + MX check) — FREE, no API key needed
 const result = await validateEmail('someone@gmail.com');
@@ -40,7 +40,7 @@ if (!result.valid) {
 Verify that a mailbox actually exists — catches fake emails like `fakeperson123@gmail.com`.
 
 ```typescript
-import { configure, validateEmail } from 'burner-email-validator';
+import { configure, validateEmail } from 'sniffmail';
 
 // Get your free API key at https://sniffmail.io
 configure({
@@ -109,7 +109,7 @@ const result = await validateEmail('user@example.com', {
 Validates multiple emails with concurrency control.
 
 ```typescript
-import { validateEmails } from 'burner-email-validator';
+import { validateEmails } from 'sniffmail';
 
 const { results, summary } = await validateEmails(
   ['a@gmail.com', 'b@tempmail.com', 'c@company.com'],
@@ -128,7 +128,7 @@ console.log(summary);
 Configure global settings.
 
 ```typescript
-import { configure } from 'burner-email-validator';
+import { configure } from 'sniffmail';
 
 configure({
   apiKey: 'sniff_xxx',  // Your Sniffmail API key
@@ -149,7 +149,7 @@ configure({
 Quick synchronous check if a domain is disposable (no network calls, no API key needed).
 
 ```typescript
-import { isDisposableDomain } from 'burner-email-validator';
+import { isDisposableDomain } from 'sniffmail';
 
 if (isDisposableDomain('tempmail.com')) {
   console.log('Blocked!');
@@ -187,7 +187,7 @@ When using `deep: true`, the `smtp` field contains:
 ### Signup Form Validation
 
 ```typescript
-import { validateEmail } from 'burner-email-validator';
+import { validateEmail } from 'sniffmail';
 
 async function validateSignupEmail(email: string): Promise<string | null> {
   const result = await validateEmail(email);
@@ -212,7 +212,7 @@ async function validateSignupEmail(email: string): Promise<string | null> {
 ### Deep Verification for Critical Flows
 
 ```typescript
-import { configure, validateEmail } from 'burner-email-validator';
+import { configure, validateEmail } from 'sniffmail';
 
 // Configure once at app startup
 configure({
@@ -238,7 +238,7 @@ async function verifyEmailForInvoice(email: string): Promise<boolean> {
 ### Bulk Email List Cleaning
 
 ```typescript
-import { configure, validateEmails } from 'burner-email-validator';
+import { configure, validateEmails } from 'sniffmail';
 
 configure({ apiKey: process.env.SNIFFMAIL_API_KEY });
 
@@ -261,7 +261,7 @@ import {
   validateEmail,
   ApiKeyNotConfiguredError,
   SniffmailError
-} from 'burner-email-validator';
+} from 'sniffmail';
 
 try {
   const result = await validateEmail('test@example.com', { deep: true });
@@ -292,7 +292,7 @@ Results are cached to avoid redundant verification:
 ### Redis Cache
 
 ```typescript
-import { configure, RedisCache } from 'burner-email-validator';
+import { configure, RedisCache } from 'sniffmail';
 import Redis from 'ioredis';
 
 const redis = new Redis('redis://localhost:6379');

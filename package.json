@@ -1,6 +1,6 @@
 {
-  "name": "burner-email-validator",
-  "version": "2.0.0",
+  "name": "sniffmail",
+  "version": "1.0.0",
   "description": "Email validation library that detects disposable/burner email addresses and verifies mailbox existence",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -25,11 +25,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sniffmail/burner-email-validator.git"
+    "url": "git+https://github.com/sniffmail/sniffmail.git"
   },
   "homepage": "https://sniffmail.io",
   "bugs": {
-    "url": "https://github.com/sniffmail/burner-email-validator/issues"
+    "url": "https://github.com/sniffmail/sniffmail/issues"
   },
   "keywords": [
     "email",
