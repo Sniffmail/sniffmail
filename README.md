@@ -56,12 +56,11 @@ if (result.smtp?.is_reachable === 'invalid') {
 
 ### Pricing
 
-| Tier | Verifications | Price |
-|------|---------------|-------|
-| Free | 100/month | $0 |
-| Starter | 2,500/month | $12 |
-| Pro | 10,000/month | $39 |
-| Business | 50,000/month | $149 |
+| Tier | Verifications | Rate Limit | Price |
+|------|---------------|------------|-------|
+| Free | 500/month | 10 req/min | $0 |
+| Pro | 25,000/month | 60 req/min | $19/mo |
+| Scale | 50k included | 200 req/min | $49/mo + $0.001/email |
 
 Get your API key at [https://sniffmail.io](https://sniffmail.io)
 

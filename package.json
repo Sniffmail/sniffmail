@@ -1,6 +1,6 @@
 {
   "name": "sniffmail",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Email validation library that detects disposable/burner email addresses and verifies mailbox existence",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
