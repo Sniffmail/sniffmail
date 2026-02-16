@@ -8,6 +8,20 @@
 const GITHUB_BLOCKLIST_URL =
   'https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains_strict.txt';
 
+// Critical fallback - always available immediately (no async)
+const IMMEDIATE_BLOCKLIST = new Set([
+  'tempmail.com', 'temp-mail.org', 'guerrillamail.com', 'guerrillamail.org',
+  'mailinator.com', 'yopmail.com', '10minutemail.com', 'throwaway.email',
+  'fakeinbox.com', 'trashmail.com', 'sharklasers.com', 'spam4.me',
+  'dispostable.com', 'maildrop.cc', 'getnada.com', 'tempail.com',
+  'mohmal.com', 'minutemailbox.com', 'emailondeck.com', 'tempr.email',
+  'temp-mail.io', 'fakemailgenerator.com', 'throwawaymail.com',
+  'mailnesia.com', 'tempmailaddress.com', 'burnermail.io', 'tempinbox.com',
+  'dropmail.me', 'mytemp.email', 'mailcatch.com', 'jetable.org',
+  'getairmail.com', 'crazymailing.com', 'wegwerfmail.de', 'moakt.com',
+  'tempmailo.com', 'emailfake.com', 'fakemail.net', 'inboxalias.com'
+]);
+
 let githubBlocklist: Set<string> = new Set();
 let blocklistLoaded = false;
 let blocklistLastFetch = 0;
@@ -52,7 +66,12 @@ export function isInGitHubBlocklist(domain: string): boolean {
 
   const normalizedDomain = domain.toLowerCase();
 
-  // Check exact match
+  // Check immediate blocklist first (always available, no async)
+  if (IMMEDIATE_BLOCKLIST.has(normalizedDomain)) {
+    return true;
+  }
+
+  // Check exact match in fetched blocklist
   if (githubBlocklist.has(normalizedDomain)) {
     return true;
   }
@@ -61,7 +80,7 @@ export function isInGitHubBlocklist(domain: string): boolean {
   const parts = normalizedDomain.split('.');
   for (let i = 1; i < parts.length - 1; i++) {
     const parentDomain = parts.slice(i).join('.');
-    if (githubBlocklist.has(parentDomain)) {
+    if (IMMEDIATE_BLOCKLIST.has(parentDomain) || githubBlocklist.has(parentDomain)) {
       return true;
     }
   }
