@@ -1,65 +1,85 @@
-/**
- * burner-email-validator v2
- *
- * Email validation library that detects disposable/burner email addresses
- * and optionally verifies mailbox existence via SMTP.
- */
+import express from 'express';
+import { config } from './config.js';
+import { disconnect } from './services/redis.js';
+import { authMiddleware } from './middleware/auth.js';
+import { rateLimitMiddleware } from './middleware/rateLimit.js';
+import { usageLimitMiddleware } from './middleware/usageLimit.js';
+import verifyRoutes from './routes/verify.js';
+import authRoutes from './routes/auth.js';
+import webhookRoutes from './routes/webhook.js';
+import healthRoutes from './routes/health.js';
+import adminRoutes from './routes/admin.js';
 
-// Main validation functions
-export {
-  validateEmail,
-  isDisposableDomain,
-  getValidatorStats,
-  addDiscoveredDomain,
-  reloadDiscoveredDomains,
-} from './validator';
+const app = express();
 
-// Batch validation
-export { validateEmails } from './batch';
+// Stripe webhook needs raw body - must be before express.json()
+app.use('/webhook/stripe', express.raw({ type: 'application/json' }));
 
-// Configuration
-export { configure } from './config';
+// JSON parsing for all other routes
+app.use(express.json());
 
-// Types
-export type {
-  ValidationResult,
-  ValidationOptions,
-  BatchValidationOptions,
-  BatchValidationResult,
-  SmtpResult,
-  ValidationReason,
-  ReachableStatus,
-  SniffmailConfig,
-  CacheStore,
-  CacheTtlConfig,
-} from './types';
+// CORS headers
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  config.appUrl,
+];
 
-// Cache utilities (for advanced usage)
-export { MemoryCache, RedisCache } from './cache';
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, x-admin-key');
+  next();
+});
 
-// Error classes (for error handling)
-export { ApiKeyNotConfiguredError, SniffmailError } from './api/client';
+// Handle preflight
+app.options('*', (_req, res) => {
+  res.sendStatus(204);
+});
 
-// Re-export individual source modules for advanced usage
-export {
-  isInGitHubBlocklist,
-  fetchGitHubBlocklist,
-  getGitHubBlocklistStats,
-} from './sources/github-blocklist';
+// Root route
+app.get('/', (_req, res) => {
+  res.status(403).send('You shouldn\'t be here.');
+});
 
-export {
-  checkDeBounceAPI,
-  getDebounceCacheStats,
-} from './sources/debounce-api';
+// Public routes
+app.use('/health', healthRoutes);
+app.use('/auth', authRoutes);
+app.use('/webhook', webhookRoutes);
 
-export {
-  isInScrapedBlocklist,
-  fetchScrapedDomains,
-  getScrapedDomainsStats,
-} from './sources/scraped-domains';
+// Admin routes (requires admin API key)
+app.use('/admin', adminRoutes);
 
-export {
-  isDiscoveredDomain,
-  getDiscoveredDomains,
-  getDiscoveredDomainsStats,
-} from './sources/discovered-domains';
+// API v1 routes (authenticated)
+app.use('/v1/verify', authMiddleware, rateLimitMiddleware, usageLimitMiddleware, verifyRoutes);
+
+// 404 handler
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Not Found' });
+});
+
+// Error handler
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Unhandled error:', err);
+  res.status(500).json({ error: 'Internal Server Error' });
+});
+
+// Graceful shutdown
+async function shutdown(): Promise<void> {
+  console.log('Shutting down...');
+  await disconnect();
+  process.exit(0);
+}
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
+// Start server
+app.listen(config.port, () => {
+  console.log(`Sniffmail API running on port ${config.port}`);
+  console.log(`Environment: ${config.nodeEnv}`);
+  console.log(`Reacher backend: ${config.reacherBackendUrl}`);
+});
