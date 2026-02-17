@@ -24,3 +24,7 @@ npm-debug.log*
 
 # Test coverage
 coverage/
+
+
+#my local jottings
+*jottings.txt
