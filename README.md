@@ -56,11 +56,16 @@ if (result.smtp?.is_reachable === 'invalid') {
 
 ### Pricing
 
+Up to **85% cheaper** than ZeroBounce, NeverBounce, and Hunter.
+
 | Tier | Verifications | Rate Limit | Price |
 |------|---------------|------------|-------|
 | Free | 500/month | 10 req/min | $0 |
-| Pro | 25,000/month | 60 req/min | $19/mo |
-| Scale | 50k included | 200 req/min | $49/mo + $0.001/email |
+| Starter | 25,000/month | 60 req/min | $29/mo |
+| Pro | 100,000/month | 200 req/min | $79/mo |
+| Scale | 200,000/month | 200 req/min | $149/mo |
+
+Also available: **Credit Packs** for pay-as-you-go usage (as low as $0.001/email).
 
 Get your API key at [https://sniffmail.io](https://sniffmail.io)
 

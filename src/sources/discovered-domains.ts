@@ -9,23 +9,14 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Get directory path - handle serverless/bundled environments where import.meta.url may be undefined
-let DISCOVERED_DOMAINS_FILE: string | null = null;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-try {
-  if (typeof import.meta !== 'undefined' && import.meta.url) {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = path.dirname(__filename);
-    // When built, __dirname is 'dist/', so we need to look in 'src/data/' from package root
-    // When in dev, __dirname is 'src/sources/', so '../data/' works
-    const packageRoot = path.resolve(__dirname, __dirname.includes('dist') ? '..' : '../..');
-    DISCOVERED_DOMAINS_FILE = path.join(packageRoot, 'src/data/discovered-domains.json');
-  }
-} catch {
-  // In bundled/serverless environments, import.meta.url may not work
-  // We'll rely on remote sources instead
-  console.log('[Discovered Domains] Running in bundled environment, skipping local file');
-}
+// File containing discovered domains
+// When built, __dirname is 'dist/', so we need to look in 'src/data/' from package root
+// When in dev, __dirname is 'src/sources/', so '../data/' works
+const packageRoot = path.resolve(__dirname, __dirname.includes('dist') ? '..' : '../..');
+const DISCOVERED_DOMAINS_FILE = path.join(packageRoot, 'src/data/discovered-domains.json');
 
 let discoveredDomains: Set<string> = new Set();
 let lastLoadTime = 0;
@@ -35,13 +26,6 @@ const RELOAD_INTERVAL = 60 * 60 * 1000; // Reload every hour
  * Load discovered domains from disk
  */
 async function loadDiscoveredDomains(): Promise<void> {
-  // Skip if running in bundled environment without file access
-  if (!DISCOVERED_DOMAINS_FILE) {
-    discoveredDomains = new Set();
-    lastLoadTime = Date.now();
-    return;
-  }
-
   try {
     const data = await fs.readFile(DISCOVERED_DOMAINS_FILE, 'utf-8');
     const parsed = JSON.parse(data);
@@ -86,12 +70,6 @@ export async function addDiscoveredDomain(domain: string): Promise<void> {
   if (!discoveredDomains.has(normalizedDomain)) {
     discoveredDomains.add(normalizedDomain);
 
-    // Skip file write if running in bundled environment
-    if (!DISCOVERED_DOMAINS_FILE) {
-      console.log(`[Discovered Domains] Added to memory: ${normalizedDomain}`);
-      return;
-    }
-
     try {
       const data = {
         domains: Array.from(discoveredDomains).sort(),
@@ -129,29 +107,24 @@ export function getDiscoveredDomainsStats(): {
   lastLoad: number;
   healthy: boolean;
   healthWarnings: string[];
-  bundledMode: boolean;
 } {
   const warnings: string[] = [];
-  const bundledMode = !DISCOVERED_DOMAINS_FILE;
 
-  // In bundled mode, don't warn about missing file - rely on remote sources
-  if (!bundledMode) {
-    if (discoveredDomains.size < 10) {
-      warnings.push(
-        `Suspiciously low domain count (${discoveredDomains.size}). File may be corrupted.`
-      );
-    }
+  if (discoveredDomains.size < 10) {
+    warnings.push(
+      `Suspiciously low domain count (${discoveredDomains.size}). File may be corrupted.`
+    );
+  }
 
-    const TWO_DAYS = 48 * 60 * 60 * 1000;
-    if (lastLoadTime > 0 && Date.now() - lastLoadTime > TWO_DAYS) {
-      warnings.push(
-        `Domain data is stale (${Math.round((Date.now() - lastLoadTime) / (60 * 60 * 1000))} hours old).`
-      );
-    }
+  const TWO_DAYS = 48 * 60 * 60 * 1000;
+  if (lastLoadTime > 0 && Date.now() - lastLoadTime > TWO_DAYS) {
+    warnings.push(
+      `Domain data is stale (${Math.round((Date.now() - lastLoadTime) / (60 * 60 * 1000))} hours old).`
+    );
+  }
 
-    if (lastLoadTime === 0 && discoveredDomains.size === 0) {
-      warnings.push('Domain file was never loaded.');
-    }
+  if (lastLoadTime === 0 && discoveredDomains.size === 0) {
+    warnings.push('Domain file was never loaded.');
   }
 
   return {
@@ -159,7 +132,6 @@ export function getDiscoveredDomainsStats(): {
     lastLoad: lastLoadTime,
     healthy: warnings.length === 0,
     healthWarnings: warnings,
-    bundledMode,
   };
 }
 
