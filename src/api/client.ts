@@ -42,7 +42,7 @@ export async function checkMailbox(email: string): Promise<ApiResponse> {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   try {
-    const response = await fetch(`${apiUrl}/v1/verify`, {
+    const response = await fetch(`${apiUrl}/verify`, {
       method: 'POST',
       headers,
       body: JSON.stringify({ email }),
