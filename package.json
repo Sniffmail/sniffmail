@@ -1,6 +1,7 @@
 {
   "name": "sniffmail",
   "version": "1.0.5",
+  "type": "module",
   "description": "Email validation library that detects disposable/burner email addresses and verifies mailbox existence",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -20,6 +21,10 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "scrape": "npx tsx scripts/scrape-domains.ts",
     "prepublishOnly": "npm run build"
   },
@@ -63,11 +68,17 @@
     "p-limit": "^5.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@types/node": "^20.10.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.0.0",
     "puppeteer": "^21.0.0",
     "tsup": "^8.0.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "typescript-eslint": "^8.0.0"
   },
   "peerDependencies": {
     "ioredis": "^5.3.0"
