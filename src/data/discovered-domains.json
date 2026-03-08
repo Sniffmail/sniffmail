@@ -1,6 +1,7 @@
 {
   "_comment": "AUTO-GENERATED FILE - DO NOT EDIT MANUALLY. Updated daily by GitHub Action.",
   "domains": [
+    "10mail.info",
     "10mail.org",
     "10mail.xyz",
     "10minutemail.com",
@@ -31,6 +32,7 @@
     "mailinator.com",
     "mailnesia.com",
     "mailpwr.com",
+    "mailtowin.com",
     "maximail.fyi",
     "maximail.vip",
     "mimimail.me",
@@ -38,6 +40,8 @@
     "mohmal.com",
     "mt2015.com",
     "mytrashmail.com",
+    "pickmemail.com",
+    "picomail.biz",
     "pokemail.net",
     "sharklasers.com",
     "smashmail.de",
@@ -53,6 +57,7 @@
     "throwaway.email",
     "throwawaymail.com",
     "trashmail.com",
+    "trashmail.lol",
     "wwjmp.com",
     "xojxe.com",
     "yoggm.com",
@@ -60,6 +65,6 @@
     "yopmail.com",
     "yopmail.fr"
   ],
-  "lastScrape": 1772864777874,
-  "count": 58
+  "lastScrape": 1772951430940,
+  "count": 63
 }
