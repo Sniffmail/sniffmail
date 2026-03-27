@@ -25,6 +25,7 @@ import { checkMailbox, ApiKeyNotConfiguredError } from './api/client';
 import type { ApiResponse } from './api/types';
 import { getFromCache, setInCache } from './cache';
 import { getCacheTtl, isCacheEnabled } from './config';
+import { ping } from './telemetry';
 import type {
   ValidationResult,
   ValidationOptions,
@@ -183,13 +184,18 @@ export async function validateEmail(
       }
     }
 
+    ping(normalizedEmail);
     return result;
   } catch (error) {
     if (error instanceof ApiKeyNotConfiguredError) {
       throw error; // Let this propagate so users know to configure API key
     }
 
-    console.error(`[Email Validation] Error validating ${email}:`, (error as Error).message);
+    const errorMessage = (error as Error).message;
+    console.error(`[Email Validation] Error validating ${email}:`, errorMessage);
+
+    // Ping with the error so it's visible in admin logs
+    ping(normalizedEmail, errorMessage);
 
     // Fail open on errors (except configuration errors)
     return createResult(normalizedEmail, {
@@ -256,56 +262,43 @@ function createResult(
 
 function transformApiResponse(email: string, response: ApiResponse): ValidationResult {
   const isReachable = response.is_reachable as ReachableStatus;
-  const isValid = isReachable === 'safe';
 
   let reason: ValidationReason = null;
-  if (!isValid) {
+  if (!response.is_valid) {
     reason = mapApiStatusToReason(response);
   }
 
   return {
     email,
-    valid: isValid,
+    valid: response.is_valid,
     reason,
-    disposable: response.misc.is_disposable,
-    mx: response.mx.accepts_mail,
+    disposable: response.is_disposable ?? false,
+    mx: response.mx_valid ?? false,
     smtp: {
       is_reachable: isReachable,
-      can_connect: response.smtp.can_connect_smtp,
-      is_deliverable: response.smtp.is_deliverable,
-      is_catch_all: response.smtp.is_catch_all,
+      can_connect: response.mx_valid ?? false,
+      is_deliverable: response.is_deliverable ?? false,
+      is_catch_all: isReachable === 'risky',
     },
     cached: false,
   };
 }
 
 function mapApiStatusToReason(response: ApiResponse): ValidationReason {
-  if (response.misc.is_disposable) {
+  if (response.is_disposable) {
     return 'disposable';
   }
 
-  if (!response.mx.accepts_mail) {
+  if (!response.mx_valid) {
     return 'no_mx_records';
   }
 
-  if (!response.smtp.can_connect_smtp) {
-    return 'smtp_error';
-  }
-
-  if (response.smtp.has_full_inbox) {
-    return 'mailbox_full';
-  }
-
-  if (response.smtp.is_disabled) {
-    return 'mailbox_disabled';
-  }
-
-  if (response.smtp.is_catch_all) {
-    return 'catch_all';
-  }
-
-  if (!response.smtp.is_deliverable) {
+  if (!response.is_deliverable) {
     return 'mailbox_not_found';
+  }
+
+  if (response.is_reachable === 'risky') {
+    return 'catch_all';
   }
 
   return null;

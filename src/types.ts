@@ -1,4 +1,4 @@
-export type ReachableStatus = 'safe' | 'risky' | 'invalid' | 'unknown';
+export type ReachableStatus = 'safe' | 'risky' | 'invalid' | 'unknown' | 'unverified';
 
 export type ValidationReason =
   | 'invalid_syntax'

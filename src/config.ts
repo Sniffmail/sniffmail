@@ -39,7 +39,8 @@ export function getApiKey(): string | undefined {
   return globalConfig.apiKey || process.env.SNIFFMAIL_API_KEY;
 }
 
-export function getCacheTtl(status: 'safe' | 'invalid' | 'risky' | 'unknown'): number {
+export function getCacheTtl(status: 'safe' | 'invalid' | 'risky' | 'unknown' | 'unverified'): number {
+  if (status === 'unverified') return DEFAULT_TTL.unknown; // treat unverified same as unknown — don't cache
   return globalConfig.cache?.ttl?.[status] ?? DEFAULT_TTL[status];
 }
 
