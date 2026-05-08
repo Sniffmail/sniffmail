@@ -309,6 +309,19 @@ configure({
 });
 ```
 
+## Network Requirements
+
+If you're running Sniffmail behind a firewall or in a restricted network environment, the SDK makes outbound requests to the following domains:
+
+| Domain | Purpose | Required |
+|--------|---------|----------|
+| `raw.githubusercontent.com` | Fetches community-maintained disposable email blocklist (26,000+ domains). Refreshed every 24 hours. | Yes |
+| `disposable.debounce.io` | Real-time disposable email detection API (free). Results cached for 24 hours. | No (disable with `useDeBounce: false`) |
+| `deviceandbrowserinfo.com` | Scrapes disposable email domains from temp mail providers. Refreshed every 24 hours. | No (falls back to hardcoded list) |
+| `api.sniffmail.io` | Sniffmail API for deep SMTP verification and telemetry. | Only for `deep: true` mode |
+
+If GitHub (`raw.githubusercontent.com`) is unreachable, the SDK falls back to a hardcoded list of ~100+ known disposable domains, so basic disposable detection still works offline.
+
 ## License
 
 MIT
